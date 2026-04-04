@@ -1,0 +1,24 @@
+[Unit]
+Description=Telegram Automation Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/telegram-automation
+EnvironmentFile=/opt/telegram-automation/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/telegram-automation/.venv/bin/python -m app.main
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+SyslogIdentifier=telegram-automation
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
