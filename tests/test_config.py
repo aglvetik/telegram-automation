@@ -9,6 +9,7 @@ def _base_env() -> dict[str, str]:
         "TELEGRAM_API_HASH": "hash-value",
         "TELEGRAM_SESSION_NAME": "main_account",
         "TELEGRAM_SESSION_DIR": "./data/sessions",
+        "CHAT_STATE_DB_PATH": "./data/chat_state.sqlite3",
         "PRIMARY_MENTION": "@unsigned69",
         "MESSAGE_LIMIT": "30",
         "MEMORY_TTL_SECONDS": "600",

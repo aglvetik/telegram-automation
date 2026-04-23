@@ -53,28 +53,36 @@ class ApplicationRuntime:
 
             async with httpx.AsyncClient(timeout=timeout) as http_client:
                 llm_service = ChatCompletionService(self._settings, http_client)
-                handler = TelegramEventHandler(
-                    settings=self._settings,
-                    llm_service=llm_service,
-                    history_store=InMemoryHistoryStore(
-                        message_limit=self._settings.message_limit,
-                        ttl_seconds=self._settings.memory_ttl_seconds,
-                    ),
-                    chat_state_store=ChatStateStore(),
-                    counter_store=MessageCounterStore(),
-                    content_filter=DangerousContentFilter(self._settings.dangerous_words),
-                    recent_message_guard=RecentMessageGuard(
-                        ttl_seconds=self._settings.recent_message_ttl_seconds
-                    ),
-                )
-                client = build_telegram_client(self._settings, session_reference)
-                handler.register(client)
+                with ChatStateStore(self._settings.chat_state_db_path) as chat_state_store:
+                    logger.info(
+                        "Loaded persisted chat state",
+                        extra={
+                            "chat_state_db_path": str(self._settings.chat_state_db_path),
+                            "chat_state_count": chat_state_store.count_persisted_states(),
+                        },
+                    )
+                    handler = TelegramEventHandler(
+                        settings=self._settings,
+                        llm_service=llm_service,
+                        history_store=InMemoryHistoryStore(
+                            message_limit=self._settings.message_limit,
+                            ttl_seconds=self._settings.memory_ttl_seconds,
+                        ),
+                        chat_state_store=chat_state_store,
+                        counter_store=MessageCounterStore(),
+                        content_filter=DangerousContentFilter(self._settings.dangerous_words),
+                        recent_message_guard=RecentMessageGuard(
+                            ttl_seconds=self._settings.recent_message_ttl_seconds
+                        ),
+                    )
+                    client = build_telegram_client(self._settings, session_reference)
+                    handler.register(client)
 
-                self._install_signal_handlers()
-                try:
-                    await self._run_client(client)
-                finally:
-                    self._remove_signal_handlers()
+                    self._install_signal_handlers()
+                    try:
+                        await self._run_client(client)
+                    finally:
+                        self._remove_signal_handlers()
 
     async def _run_client(self, client: TelegramClient) -> None:
         async with client:

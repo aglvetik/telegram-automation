@@ -111,6 +111,7 @@ class Settings:
     telegram_api_hash: str
     telegram_session_name: str
     telegram_session_dir: Path
+    chat_state_db_path: Path
     primary_mention: str
     message_limit: int
     memory_ttl_seconds: int
@@ -157,6 +158,11 @@ class Settings:
         if not session_dir.is_absolute():
             session_dir = (Path.cwd() / session_dir).resolve()
 
+        chat_state_db_path = Path(env.get("CHAT_STATE_DB_PATH", "./data/chat_state.sqlite3"))
+        chat_state_db_path = chat_state_db_path.expanduser()
+        if not chat_state_db_path.is_absolute():
+            chat_state_db_path = (Path.cwd() / chat_state_db_path).resolve()
+
         dangerous_words = parse_csv(_require_text(env, "DANGEROUS_WORDS"))
         if not dangerous_words:
             raise ConfigError("DANGEROUS_WORDS must contain at least one value")
@@ -191,6 +197,7 @@ class Settings:
             telegram_api_hash=_require_secret(env, "TELEGRAM_API_HASH"),
             telegram_session_name=session_name,
             telegram_session_dir=session_dir,
+            chat_state_db_path=chat_state_db_path,
             primary_mention=_require_text(env, "PRIMARY_MENTION"),
             message_limit=parse_int(
                 _require_text(env, "MESSAGE_LIMIT"),
@@ -276,6 +283,7 @@ class Settings:
             "telegram_session_name": self.telegram_session_name,
             "telegram_session_dir": str(self.telegram_session_dir),
             "session_file_path": str(self.session_file_path),
+            "chat_state_db_path": str(self.chat_state_db_path),
             "primary_mention": self.primary_mention,
             "message_limit": self.message_limit,
             "memory_ttl_seconds": self.memory_ttl_seconds,

@@ -13,6 +13,8 @@ class ContextFormatter(logging.Formatter):
         "reason",
         "session_path",
         "lock_path",
+        "chat_state_db_path",
+        "chat_state_count",
         "status_code",
     )
 

@@ -12,4 +12,7 @@ __pycache__/
 *.session-journal
 *.session-shm
 *.session-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
 data/

@@ -7,6 +7,7 @@ Production-ready Telegram user-account automation service for Ubuntu VPS, built 
 - Monolithic script replaced with a modular `app/` package.
 - Telethon session storage moved to a dedicated configurable directory.
 - Added a process lock file to prevent duplicate instances and session DB contention.
+- Persisted per-chat `!start` / `!stop` state in SQLite so disabled chats stay disabled after restart.
 - Replaced global mutable state with small dedicated classes for chat state, counters, history, and duplicate-event suppression.
 - Added graceful async startup and shutdown with `asyncio.run(main())`, `async with TelegramClient(...)`, and `async with httpx.AsyncClient(...)`.
 - Added configuration validation, structured logging, retries for outbound API calls, and minimal tests.
@@ -74,6 +75,7 @@ python -m app.main
 ```
 
 Telethon will create the session in `TELEGRAM_SESSION_DIR/TELEGRAM_SESSION_NAME.session`.
+The chat enable/disable state is stored in `CHAT_STATE_DB_PATH`.
 Use exactly one long-lived process per Telegram session. Do not keep a manual shell instance running after you enable the `systemd` service.
 
 If you previously had `main_account.session` in the project root, the service automatically migrates legacy session files into the dedicated session directory on startup.
@@ -85,6 +87,7 @@ After the session exists and the account is authorized, you can run it through `
 - Private chats are always eligible for auto-reply.
 - Group chats reply only on mention, explicit mention string, reply-to-self, or when the configured message threshold is reached.
 - `!stop` and `!start` are preserved as self-commands, but only your own outgoing messages can trigger them.
+- `!stop` and `!start` are persisted per `chat_id` in SQLite. Chats missing from storage are enabled by default.
 - Disabling a chat resets that chat's counter so it does not burst-reply immediately after re-enable.
 - Short-term memory is stored per `(chat_id, user_id)` with TTL and message-count pruning.
 - Dangerous messages return the fixed `DANGEROUS_REPLY` without calling the upstream LLM API. Matching is now token-boundary based, so unrelated substrings like `manuscript` no longer trip the `script` rule.
@@ -181,6 +184,22 @@ That is expected for a brand-new user account session. Run the app manually once
 ### Duplicate or repeated replies
 
 The service now keeps a short-lived in-memory guard for processed `(chat_id, message_id)` pairs to reduce duplicate handling after reconnects within the same running process. Running only one instance remains the main protection.
+
+### Chat state database
+
+The `!start` / `!stop` state is stored in SQLite at `CHAT_STATE_DB_PATH`.
+
+Schema:
+
+```sql
+CREATE TABLE IF NOT EXISTS chat_states (
+    chat_id INTEGER PRIMARY KEY,
+    enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+    updated_at TEXT NOT NULL
+);
+```
+
+The app creates this table automatically on startup. Unknown chats are enabled by default, matching the original behavior.
 
 ### Invalid `.env` under systemd
 
